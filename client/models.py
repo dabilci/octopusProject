@@ -20,6 +20,11 @@ class Client(models.Model):
     address = models.TextField()
     profile_photo = models.ImageField(upload_to='clients/',null=True,blank=True)
     fcm_token = models.CharField(max_length=255, blank=True, null=True)
+
+    #dogrulama kodu
+    email_verification_code = models.CharField(max_length=6, null=True, blank=True)
+    email_verified = models.BooleanField(default=False)
+    verification_code_created_at = models.DateTimeField(null=True, blank=True)
     
     # Pasaport
     passport_first_name = models.CharField(max_length=100)

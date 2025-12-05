@@ -1,3 +1,4 @@
+import smtplib
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
@@ -10,6 +11,14 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from .models import Provider
 import json
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
+import random
+from django.utils import timezone
+from django.contrib.auth import authenticate
+from django.contrib.auth import login as auth_login
 
 @csrf_exempt
 def login(request):
@@ -39,6 +48,9 @@ def login(request):
                     "success": False,
                     "error": "Şifre hatalı"
                 }, status=401)
+            
+            # ✅ SESSION BAŞLAT
+            auth_login(request, auth_user)
             
             # User'a bağlı Provider'ı bul
             try:
@@ -114,6 +126,23 @@ def register_provider(request):
                 authorized_email=data['authorized_email'],
                 services=data['services'],
                 fcm_token=data.get('fcm_token')
+            )
+
+            # 6 haneli doğrulama kodu oluştur
+            verification_code = str(random.randint(100000, 999999))
+            provider.email_verification_code = verification_code
+            provider.verification_code_created_at = timezone.now()
+            provider.save()
+
+            # Email gönder
+            send_email(
+                subject="Email Doğrulama Kodu - AssistAll",
+                mesaj=f"""
+                <h2>Merhaba {provider.first_name},</h2>
+                <p>Email doğrulama kodunuz: <strong>{verification_code}</strong></p>
+                <p>Bu kod 3 dakika geçerlidir.</p>
+                """,
+                reciever=provider.email
             )
             
             return JsonResponse({
@@ -217,6 +246,126 @@ def update_fcm_token(request):
 @csrf_exempt
 def verify_email(request):
     if request.method == "POST":
-        return JsonResponse({
-            "message": "Email verified successfully"
-        })
+        try:
+            data = json.loads(request.body)
+            email = data.get('email')
+            code = data.get('code')
+            
+            if not email or not code:
+                return JsonResponse({
+                    "success": False,
+                    "error": "Email ve kod gerekli"
+                }, status=400)
+            
+            # Provider'ı bul
+            try:
+                provider = Provider.objects.get(email=email)
+            except Provider.DoesNotExist:
+                return JsonResponse({
+                    "success": False,
+                    "error": "Kullanıcı bulunamadı"
+                }, status=404)
+            
+            # Zaten doğrulanmış mı?
+            if provider.email_verified:
+                return JsonResponse({
+                    "success": False,
+                    "error": "Email zaten doğrulanmış"
+                }, status=400)
+            
+            # Kod süresi dolmuş mu? (3 dakika)
+            from django.utils import timezone
+            from datetime import timedelta
+            
+            if provider.verification_code_created_at:
+                expire_time = provider.verification_code_created_at + timedelta(minutes=3)
+                if timezone.now() > expire_time:
+                    return JsonResponse({
+                        "success": False,
+                        "error": "Doğrulama kodu süresi dolmuş. Yeni kod isteyin."
+                    }, status=400)
+            
+            # Kod doğru mu?
+            if provider.email_verification_code != code:
+                return JsonResponse({
+                    "success": False,
+                    "error": "Doğrulama kodu hatalı"
+                }, status=400)
+            
+            # Doğrula
+            provider.email_verified = True
+            provider.email_verification_code = None  # Kodu sil
+            provider.save()
+            
+            return JsonResponse({
+                "success": True,
+                "message": "Email başarıyla doğrulandı"
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({"success": False, "error": "Geçersiz JSON"}, status=400)
+    
+    return JsonResponse({"error": "Sadece POST"}, status=405)
+
+@csrf_exempt
+def resend_verification_code(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            email = data.get('email')
+            
+            if not email:
+                return JsonResponse({"success": False, "error": "Email gerekli"}, status=400)
+            
+            try:
+                provider = Provider.objects.get(email=email)
+            except Provider.DoesNotExist:
+                return JsonResponse({"success": False, "error": "Kullanıcı bulunamadı"}, status=404)
+            
+            if provider.email_verified:
+                return JsonResponse({"success": False, "error": "Email zaten doğrulanmış"}, status=400)
+            
+            # Yeni kod oluştur
+            from django.utils import timezone
+            import random
+            
+            verification_code = str(random.randint(100000, 999999))
+            provider.email_verification_code = verification_code
+            provider.verification_code_created_at = timezone.now()
+            provider.save()
+            
+            send_email(
+                subject="Yeni Doğrulama Kodu - AssistAll",
+                mesaj=f"""
+                <h2>Merhaba {provider.first_name},</h2>
+                <p>Yeni email doğrulama kodunuz: <strong>{verification_code}</strong></p>
+                <p>Bu kod 3 dakika geçerlidir.</p>
+                """,
+                reciever=provider.email
+            )
+            
+            return JsonResponse({"success": True, "message": "Yeni doğrulama kodu gönderildi"})
+            
+        except json.JSONDecodeError:
+            return JsonResponse({"success": False, "error": "Geçersiz JSON"}, status=400)
+    
+    return JsonResponse({"error": "Sadece POST"}, status=405)
+        
+        
+def send_email(subject,mesaj,reciever):
+
+    sender = "info@asistall.com"
+    password = "@Asistall.com34"
+
+    email = MIMEMultipart()
+    email["From"] = sender
+    email["Subject"] = subject
+    email["To"] = reciever
+    email.attach(MIMEText(mesaj, 'html'))
+    with smtplib.SMTP("smtp.asistall.com", 587) as smtp:
+        smtp.ehlo()
+        smtp.login(sender, password)
+        print([reciever])
+        mail_liste = [reciever]
+        smtp.sendmail(sender, mail_liste, email.as_string())
+        

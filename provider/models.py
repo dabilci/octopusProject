@@ -15,6 +15,10 @@ class Provider(models.Model):
     country = models.CharField(max_length=100)
     city = models.CharField(max_length=100)
     tax_number = models.CharField(max_length=50)
+
+    email_verification_code = models.CharField(max_length=6, null=True, blank=True)
+    email_verified = models.BooleanField(default=False)
+    verification_code_created_at = models.DateTimeField(null=True, blank=True)
     
     authorized_phone = models.CharField(max_length=20)
     authorized_email = models.EmailField()
