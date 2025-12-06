@@ -23,3 +23,6 @@ class Provider(models.Model):
     authorized_phone = models.CharField(max_length=20)
     authorized_email = models.EmailField()
     services = models.TextField() 
+
+    def __str__(self):
+        return f"{self.company_name} - {self.first_name} {self.last_name}"

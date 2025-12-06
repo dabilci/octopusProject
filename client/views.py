@@ -330,25 +330,70 @@ def login(request):
             
             # ✅ SESSION BAŞLAT
             auth_login(request, auth_user)
-            # User'a bağlı Client'ı bul
-            try:
-                client = Client.objects.get(user=auth_user)
-            except Client.DoesNotExist:
+            
+            # Kullanıcının rolünü belirle
+            from assistant.models import Assistant
+            from provider.models import Provider
+            
+            # Assistant mı?
+            assistant = Assistant.objects.filter(user=auth_user).first()
+            if assistant:
                 return JsonResponse({
-                    "success": False,
-                    "error": "Client profili bulunamadı"
-                }, status=404)
+                    "success": True,
+                    "user": {
+                        "id": assistant.id,
+                        "email": assistant.email,
+                        "first_name": assistant.first_name,
+                        "last_name": assistant.last_name,
+                        "role": "ASSISTANT"
+                    }
+                })
+            
+            # Provider mı?
+            provider = Provider.objects.filter(user=auth_user).first()
+            if provider:
+                return JsonResponse({
+                    "success": True,
+                    "user": {
+                        "id": provider.id,
+                        "email": provider.email,
+                        "first_name": provider.first_name,
+                        "last_name": provider.last_name,
+                        "role": "PROVIDER"
+                    }
+                })
+            
+            # Client mı?
+            client = Client.objects.filter(user=auth_user).first()
+            if client:
+                return JsonResponse({
+                    "success": True,
+                    "user": {
+                        "id": client.id,
+                        "email": client.email,
+                        "first_name": client.first_name,
+                        "last_name": client.last_name,
+                        "role": "CLIENT"
+                    }
+                })
+            
+            # Hiçbiri değilse (sadece superuser olabilir)
+            if auth_user.is_superuser:
+                return JsonResponse({
+                    "success": True,
+                    "user": {
+                        "id": auth_user.id,
+                        "email": auth_user.email,
+                        "first_name": auth_user.first_name or auth_user.username,
+                        "last_name": auth_user.last_name or "",
+                        "role": "ADMIN"
+                    }
+                })
             
             return JsonResponse({
-                "success": True,
-                "user": {
-                    "id": client.id,
-                    "email": client.email,
-                    "first_name": client.first_name,
-                    "last_name": client.last_name,
-                    "role": "CLIENT"
-                }
-            })
+                "success": False,
+                "error": "Kullanıcı profili bulunamadı"
+            }, status=404)
             
         except json.JSONDecodeError:
             return JsonResponse({"success": False, "error": "Geçersiz JSON"}, status=400)

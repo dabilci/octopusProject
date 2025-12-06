@@ -26,6 +26,9 @@ urlpatterns = [
     path('', include('client.urls')),
     path('', include('provider.urls')),
     path('', include('requests.urls')),
+    path('', include('assistant.urls')),
+    #path('', include('offers.urls')),
+    path('', include('chat.urls')),
 ]
 
 # Development'ta media dosyalarını serve et

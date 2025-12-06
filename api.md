@@ -41,6 +41,7 @@ Sadece `ROLE_ASSISTANT` ve `ROLE_ADMIN` erişebilir.
 | :----- | :--------------------------------------- | :-------------------------------------------------------- |
 | `GET`  | `/api/v1/assistant/tasks`                | Havuzdaki atanmamış veya asistana atanmış işleri listele. |
 | `POST` | `/api/v1/assistant/requests/{id}/assign` | İşi kendine veya başkasına ata.                           |
+| `GET` | `/api/v1/assistant/requests/{id}/assign` | Tüm asistanları listele
 | `PUT`  | `/api/v1/assistant/requests/{id}/status` | Talep durumunu güncelle (Örn: In Review).                 |
 | `GET`  | `/api/v1/assistant/providers/search`     | Talebe uygun hizmet verenleri ara/filtrele.               |
 | `POST` | `/api/v1/assistant/requests/{id}/notes`  | Talebe sadece asistanların göreceği iç not ekle.          |

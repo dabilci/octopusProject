@@ -41,6 +41,9 @@ INSTALLED_APPS = [
     'client',
     'provider',
     'requests',
+    'assistant',
+    #'offers',
+    'chat',
 ]
 
 MIDDLEWARE = [
@@ -50,6 +53,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'octopusProject.middleware.SessionExpiredMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -129,3 +133,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Media files (Kullanıcı yüklemeleri)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+
+#session süresi
+SESSION_COOKIE_AGE = 60 * 60 *24 * 30 #30 gün
+
+LOGIN_URL = '/api/v1/auth/login'
+
+
